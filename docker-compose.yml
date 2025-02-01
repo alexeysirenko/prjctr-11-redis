@@ -1,0 +1,123 @@
+version: "3.8"
+
+networks:
+  redis-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24 # Static subnet
+
+volumes:
+  redis-master-data:
+  redis-replica1-data:
+  redis-replica2-data:
+  sentinel-configs: # Shared writable config for all Sentinels
+
+services:
+  redis-master:
+    image: redis:latest
+    container_name: redis-master
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    volumes:
+      - redis-master-data:/data # Persist Redis master data
+      - ./redis-master.conf:/etc/redis/redis.conf # Custom Redis config
+    networks:
+      redis-net:
+        ipv4_address: 192.168.1.10
+
+  redis-replica-1:
+    image: redis:latest
+    container_name: redis-replica-1
+    command:
+      [
+        "redis-server",
+        "/etc/redis/redis.conf",
+        "--replicaof",
+        "192.168.1.10",
+        "6379",
+      ]
+    volumes:
+      - redis-replica1-data:/data # Persist Replica 1 data
+      - ./redis-replica.conf:/etc/redis/redis.conf
+    networks:
+      redis-net:
+        ipv4_address: 192.168.1.11
+    depends_on:
+      - redis-master
+
+  redis-replica-2:
+    image: redis:latest
+    container_name: redis-replica-2
+    command:
+      [
+        "redis-server",
+        "/etc/redis/redis.conf",
+        "--replicaof",
+        "192.168.1.10",
+        "6379",
+      ]
+    volumes:
+      - redis-replica2-data:/data # Persist Replica 2 data
+      - ./redis-replica.conf:/etc/redis/redis.conf
+    networks:
+      redis-net:
+        ipv4_address: 192.168.1.12
+    depends_on:
+      - redis-master
+
+  sentinel-1:
+    image: redis:latest
+    container_name: sentinel-1
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "chown redis:redis /etc/redis/sentinel.conf && chmod 666 /etc/redis/sentinel.conf && redis-server /etc/redis/sentinel.conf --sentinel",
+      ]
+    volumes:
+      - ./sentinel-configs:/etc/redis # Mount full writable Sentinel config directory
+    networks:
+      redis-net:
+        ipv4_address: 192.168.1.20
+    depends_on:
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2
+
+  sentinel-2:
+    image: redis:latest
+    container_name: sentinel-2
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "chown redis:redis /etc/redis/sentinel.conf && chmod 666 /etc/redis/sentinel.conf && redis-server /etc/redis/sentinel.conf --sentinel",
+      ]
+    volumes:
+      - ./sentinel-configs:/etc/redis
+    networks:
+      redis-net:
+        ipv4_address: 192.168.1.21
+    depends_on:
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2
+
+  sentinel-3:
+    image: redis:latest
+    container_name: sentinel-3
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "chown redis:redis /etc/redis/sentinel.conf && chmod 666 /etc/redis/sentinel.conf && redis-server /etc/redis/sentinel.conf --sentinel",
+      ]
+    volumes:
+      - ./sentinel-configs:/etc/redis
+    networks:
+      redis-net:
+        ipv4_address: 192.168.1.22
+    depends_on:
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2
