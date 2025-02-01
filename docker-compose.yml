@@ -5,13 +5,13 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 192.168.1.0/24 # Static subnet
+        - subnet: 192.168.1.0/24
 
 volumes:
   redis-master-data:
   redis-replica1-data:
   redis-replica2-data:
-  sentinel-configs: # Shared writable config for all Sentinels
+  sentinel-configs:
 
 services:
   redis-master:
@@ -19,8 +19,8 @@ services:
     container_name: redis-master
     command: ["redis-server", "/etc/redis/redis.conf"]
     volumes:
-      - redis-master-data:/data # Persist Redis master data
-      - ./redis-master.conf:/etc/redis/redis.conf # Custom Redis config
+      - redis-master-data:/data
+      - ./redis-configs/redis-master.conf:/etc/redis/redis.conf
     networks:
       redis-net:
         ipv4_address: 192.168.1.10
@@ -37,8 +37,8 @@ services:
         "6379",
       ]
     volumes:
-      - redis-replica1-data:/data # Persist Replica 1 data
-      - ./redis-replica.conf:/etc/redis/redis.conf
+      - redis-replica1-data:/data
+      - ./redis-configs/redis-replica.conf:/etc/redis/redis.conf
     networks:
       redis-net:
         ipv4_address: 192.168.1.11
@@ -57,8 +57,8 @@ services:
         "6379",
       ]
     volumes:
-      - redis-replica2-data:/data # Persist Replica 2 data
-      - ./redis-replica.conf:/etc/redis/redis.conf
+      - redis-replica2-data:/data
+      - ./redis-configs/redis-replica.conf:/etc/redis/redis.conf
     networks:
       redis-net:
         ipv4_address: 192.168.1.12
@@ -75,7 +75,7 @@ services:
         "chown redis:redis /etc/redis/sentinel.conf && chmod 666 /etc/redis/sentinel.conf && redis-server /etc/redis/sentinel.conf --sentinel",
       ]
     volumes:
-      - ./sentinel-configs:/etc/redis # Mount full writable Sentinel config directory
+      - ./sentinel-configs:/etc/redis
     networks:
       redis-net:
         ipv4_address: 192.168.1.20
